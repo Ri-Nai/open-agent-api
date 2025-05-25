@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  agent-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      # Agent API 配置 - 请在 .env 文件中设置这些值
+      - AGENT_API_BASE_URL=${AGENT_API_BASE_URL:-https://agent.bit.edu.cn}
+      - AGENT_APP_ID=${AGENT_APP_ID}
+      - AGENT_API_KEY=${AGENT_API_KEY}
+      
+      # 服务器配置
+      - SERVER_HOST=${SERVER_HOST:-0.0.0.0}
+      - SERVER_PORT=${SERVER_PORT:-8000}
+      - API_AUTH_KEY=${API_AUTH_KEY:-}
+      
+      # 会话管理配置
+      - MAX_CONVERSATIONS=${MAX_CONVERSATIONS:-1000}
+      - CONVERSATION_TIMEOUT=${CONVERSATION_TIMEOUT:-3600}
+      
+      # 日志配置
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - VERBOSE_LOGGING=${VERBOSE_LOGGING:-false}
+    volumes:
+      # 挂载本地配置文件（可选）
+      - ./config.local.yaml:/app/config.local.yaml:ro
+    restart: unless-stopped
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    # 资源限制
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+networks:
+  default:
+    name: agent-api-network 

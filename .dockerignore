@@ -1,0 +1,68 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env
+pip-log.txt
+pip-delete-this-directory.txt
+.tox
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.git
+.mypy_cache
+.pytest_cache
+.hypothesis
+
+# 环境文件
+.env
+.env.local
+.env.*.local
+
+# 配置文件（除了默认的）
+config.local.yaml
+*.local.yaml
+
+# 测试文件
+tests/
+
+# 文档
+*.md
+!README.md
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# 旧文件
+agent_api.py
+agent_config.py
+start_agent_api.py
+requirements_agent_api.txt
+Dockerfile.agent_api
+
+# 其他
+*.tmp
+*.temp
+logs/ 
