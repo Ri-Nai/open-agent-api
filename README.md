@@ -55,7 +55,7 @@ pip install -r requirements.txt
 
 需要启用服务，并获取 `app_id` 和 `api_key` 参数。
 
-![获取参数](docs\assets\imgs\获取参数.png)
+![获取参数](docs/assets/imgs/获取参数.png)
 
 ```bash
 # 复制配置文件
