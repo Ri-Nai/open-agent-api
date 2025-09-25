@@ -128,8 +128,8 @@ class AgentService:
             
         return self.conversations[session_id]
 
-    def chat_stream(self, session_id: str, query: str) -> Optional[Generator[str, None, None]]:
-        """流式聊天"""
+    def chat_stream(self, session_id: str, conversation_content: str) -> Optional[Generator[str, None, None]]:
+        """流式聊天 - 现在接受完整的格式化对话内容，包括系统提示词和对话历史"""
         conv_info = self.get_or_create_conversation(session_id)
         if not conv_info:
             return None
@@ -138,7 +138,7 @@ class AgentService:
         payload = {
             "AppConversationID": conv_info["app_conversation_id"],
             "UserID": conv_info["user_id"],
-            "Query": query,
+            "Query": conversation_content,
             "ResponseMode": "streaming"
         }
 
@@ -179,8 +179,8 @@ class AgentService:
 
         return generate()
 
-    def chat_blocking(self, session_id: str, query: str) -> Optional[str]:
-        """阻塞式聊天"""
+    def chat_blocking(self, session_id: str, conversation_content: str) -> Optional[str]:
+        """阻塞式聊天 - 现在接受完整的格式化对话内容，包括系统提示词和对话历史"""
         conv_info = self.get_or_create_conversation(session_id)
         if not conv_info:
             return None
@@ -189,7 +189,7 @@ class AgentService:
         payload = {
             "AppConversationID": conv_info["app_conversation_id"],
             "UserID": conv_info["user_id"],
-            "Query": query,
+            "Query": conversation_content,
             "ResponseMode": "blocking"
         }
 

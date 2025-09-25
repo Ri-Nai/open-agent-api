@@ -1,5 +1,6 @@
 import time
 import uuid
+from typing import List
 from fastapi import APIRouter, HTTPException, Response
 from sse_starlette.sse import ServerSentEvent, EventSourceResponse
 
@@ -17,6 +18,27 @@ router = APIRouter()
 dependencies = get_auth_dependency()
 
 
+def format_messages_for_agent(messages: List[ChatMessage]) -> str:
+    """
+    将 OpenAI 格式的消息列表格式化为适合后端 API 的字符串格式
+    正确标注系统提示词、用户消息和助手回复
+    """
+    formatted_parts = []
+    
+    for message in messages:
+        role = message.role
+        content = message.content
+        
+        if role == "system":
+            formatted_parts.append(f"[SYSTEM]: {content}")
+        elif role == "user":
+            formatted_parts.append(f"[USER]: {content}")
+        elif role == "assistant":
+            formatted_parts.append(f"[ASSISTANT]: {content}")
+    
+    return "\n\n".join(formatted_parts)
+
+
 @router.get("/models", response_model=ModelList, dependencies=dependencies)
 async def list_models():
     """获取可用模型列表"""
@@ -32,18 +54,18 @@ async def create_chat_completion(request: ChatCompletionRequest, response: Respo
         # 生成会话ID
         session_id = str(uuid.uuid4())
         
-        # 获取最后一条用户消息
-        user_messages = [msg for msg in request.messages if msg.role == "user"]
-        if not user_messages:
-            raise HTTPException(status_code=400, detail="没有找到用户消息")
+        # 验证消息列表不为空
+        if not request.messages:
+            raise HTTPException(status_code=400, detail="消息列表不能为空")
         
-        last_user_message = user_messages[-1].content
+        # 格式化完整的对话上下文，包括系统提示词、用户消息和助手回复
+        formatted_conversation = format_messages_for_agent(request.messages)
         
         if request.stream:
             # 流式响应
             def generate():
                 try:
-                    stream_generator = agent_service.chat_stream(session_id, last_user_message)
+                    stream_generator = agent_service.chat_stream(session_id, formatted_conversation)
                     if not stream_generator:
                         yield ServerSentEvent(
                             data='{"error": "无法创建流式连接"}',
@@ -98,7 +120,7 @@ async def create_chat_completion(request: ChatCompletionRequest, response: Respo
             return EventSourceResponse(generate())
         else:
             # 非流式响应
-            answer = agent_service.chat_blocking(session_id, last_user_message)
+            answer = agent_service.chat_blocking(session_id, formatted_conversation)
             if answer is None:
                 raise HTTPException(status_code=500, detail="Agent API 调用失败")
             
