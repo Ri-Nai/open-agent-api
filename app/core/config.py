@@ -6,6 +6,12 @@ from pydantic import Field
 from pydantic_settings import BaseSettings
 
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+DEFAULT_CONFIG_FILENAMES = ("config.local.yaml", "config.yaml")
+ENV_CONFIG_FILE_VAR = "AGENT_CONFIG_FILE"
+ENV_CONFIG_DIR_VAR = "AGENT_CONFIG_DIR"
+
+
 class Settings(BaseSettings):
     """应用配置设置"""
     
@@ -41,26 +47,61 @@ class ConfigLoader:
     
     def _load_config(self):
         """加载配置文件"""
-        config_paths = [
-            "config.local.yaml",  # 优先使用本地配置
-            "config.yaml"         # 备用默认配置
-        ]
-        
-        config_loaded = False
-        for config_path in config_paths:
-            if os.path.exists(config_path):
-                try:
-                    with open(config_path, 'r', encoding='utf-8') as f:
-                        self._config = yaml.safe_load(f) or {}
-                    print(f"已加载配置文件: {config_path}")
-                    config_loaded = True
-                    break
-                except Exception as e:
-                    print(f"加载配置文件 {config_path} 失败: {e}")
-        
-        if not config_loaded:
-            print("警告: 未找到配置文件，使用默认配置")
-            self._config = self._get_default_config()
+        candidate_files = self._build_candidate_paths()
+
+        for config_path in candidate_files:
+            if not config_path:
+                continue
+
+            try:
+                with config_path.open('r', encoding='utf-8') as f:
+                    self._config = yaml.safe_load(f) or {}
+                print(f"已加载配置文件: {config_path}")
+                return
+            except FileNotFoundError:
+                continue
+            except Exception as e:
+                print(f"加载配置文件 {config_path} 失败: {e}")
+
+        print("警告: 未找到配置文件，使用默认配置")
+        self._config = self._get_default_config()
+
+    def _build_candidate_paths(self):
+        """构建配置文件搜索路径列表"""
+        candidates = []
+
+        # 环境变量指定的文件优先
+        explicit_path = os.environ.get(ENV_CONFIG_FILE_VAR)
+        if explicit_path:
+            candidates.append(Path(explicit_path).expanduser())
+
+        # 环境变量指定的目录
+        explicit_dir = os.environ.get(ENV_CONFIG_DIR_VAR)
+        if explicit_dir:
+            dir_path = Path(explicit_dir).expanduser()
+            candidates.extend(dir_path / name for name in DEFAULT_CONFIG_FILENAMES)
+
+        # 项目根目录
+        candidates.extend(PROJECT_ROOT / name for name in DEFAULT_CONFIG_FILENAMES)
+
+        # 当前工作目录（兼容旧行为）
+        cwd = Path.cwd()
+        if cwd != PROJECT_ROOT:
+            candidates.extend(cwd / name for name in DEFAULT_CONFIG_FILENAMES)
+
+        # 去重并返回
+        unique_candidates = []
+        seen = set()
+        for path in candidates:
+            try:
+                resolved = path.resolve()
+            except FileNotFoundError:
+                resolved = path
+            if resolved not in seen:
+                seen.add(resolved)
+                unique_candidates.append(path)
+
+        return unique_candidates
     
     def _get_default_config(self):
         """获取默认配置"""
