@@ -5,11 +5,20 @@
 
 import os
 import sys
-from pathlib import Path
 
-# 添加项目根目录到 Python 路径
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root))
+from test_env import (
+    load_settings,
+    reset_settings_cache,
+)
+
+
+def _reload_settings():
+    modules_to_clear = ['app.core.config', 'app.core', 'app']
+    for module in modules_to_clear:
+        if module in sys.modules:
+            del sys.modules[module]
+    reset_settings_cache()
+    return load_settings()
 
 def test_config_priority():
     """测试配置优先级"""
@@ -30,12 +39,7 @@ def test_config_priority():
                 del os.environ[var]
         
         # 重新导入配置模块
-        modules_to_clear = ['app.core.config', 'app.core', 'app']
-        for module in modules_to_clear:
-            if module in sys.modules:
-                del sys.modules[module]
-        
-        from app.core.config import settings
+        settings = _reload_settings()
         print(f"   APP_ID: {settings.APP_ID}")
         print(f"   API_KEY: {settings.API_KEY[:8]}..." if settings.API_KEY else "   API_KEY: 未配置")
         print(f"   API_BASE_URL: {settings.API_BASE_URL}")
@@ -53,12 +57,7 @@ def test_config_priority():
         os.environ['SERVER_PORT'] = '9000'
         
         # 重新导入配置模块
-        modules_to_clear = ['app.core.config', 'app.core', 'app']
-        for module in modules_to_clear:
-            if module in sys.modules:
-                del sys.modules[module]
-        
-        from app.core.config import settings
+        settings = _reload_settings()
         print(f"   APP_ID: {settings.APP_ID}")
         print(f"   API_KEY: {settings.API_KEY}")
         print(f"   SERVER_PORT: {settings.SERVER_PORT}")
@@ -78,12 +77,7 @@ def test_config_priority():
             del os.environ['SERVER_PORT']
         
         # 重新导入配置模块
-        modules_to_clear = ['app.core.config', 'app.core', 'app']
-        for module in modules_to_clear:
-            if module in sys.modules:
-                del sys.modules[module]
-        
-        from app.core.config import settings
+        settings = _reload_settings()
         print(f"   APP_ID (来自环境变量): {settings.APP_ID}")
         print(f"   API_KEY (来自配置文件): {settings.API_KEY[:8]}..." if settings.API_KEY else "   API_KEY: 未配置")
         print(f"   SERVER_PORT (来自配置文件): {settings.SERVER_PORT}")
@@ -101,12 +95,7 @@ def test_config_priority():
             del os.environ['AGENT_API_KEY']
         
         # 重新导入配置模块（应该会抛出验证错误）
-        modules_to_clear = ['app.core.config', 'app.core', 'app']
-        for module in modules_to_clear:
-            if module in sys.modules:
-                del sys.modules[module]
-        
-        from app.core.config import settings
+        settings = _reload_settings()
         print("   ⚠️ 配置验证未按预期工作")
         
     except ValueError as e:

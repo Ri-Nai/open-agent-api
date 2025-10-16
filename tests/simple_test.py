@@ -1,10 +1,13 @@
-import requests
 import json
 
-API_BASE_URL = "http://localhost:8000"
+import requests
+
+from test_env import build_headers, get_local_server_base_url
+
+API_BASE_URL = get_local_server_base_url()
 
 def test_streaming():
-    headers = {"Content-Type": "application/json"}
+    headers = build_headers("application/json")
     
     payload = {
         "model": "agent-model",
@@ -17,10 +20,13 @@ def test_streaming():
     print("发送流式请求...")
     
     try:
-        response = requests.post(f"{API_BASE_URL}/v1/chat/completions", 
-                               headers=headers, 
-                               json=payload, 
-                               stream=True)
+        response = requests.post(
+            f"{API_BASE_URL}/v1/chat/completions",
+            headers=headers,
+            json=payload,
+            stream=True,
+            timeout=30,
+        )
         
         print(f"响应状态码: {response.status_code}")
         print(f"响应头: {response.headers}")

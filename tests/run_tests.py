@@ -3,13 +3,27 @@
 测试运行脚本 - 统一运行所有测试
 """
 
-import sys
+import os
 import subprocess
+import sys
 from pathlib import Path
 
+from test_env import build_headers, get_local_server_base_url
+
 # 添加项目根目录到 Python 路径
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root))
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
+
+
+def _build_subprocess_env():
+    env = os.environ.copy()
+    pythonpath_entries = [str(PROJECT_ROOT)]
+    if env.get("PYTHONPATH"):
+        pythonpath_entries.append(env["PYTHONPATH"])
+    env["PYTHONPATH"] = os.pathsep.join(pythonpath_entries)
+    env.setdefault("AGENT_TEST_SERVER_URL", get_local_server_base_url())
+    return env
+
 
 def run_test(test_file, description):
     """运行单个测试文件"""
@@ -19,10 +33,14 @@ def run_test(test_file, description):
     print(f"{'='*60}")
     
     try:
-        result = subprocess.run([sys.executable, test_file], 
-                              capture_output=True, 
-                              text=True, 
-                              cwd=Path(__file__).parent)
+        test_path = (Path(__file__).parent / test_file).resolve()
+        result = subprocess.run(
+            [sys.executable, str(test_path)],
+            capture_output=True,
+            text=True,
+            cwd=PROJECT_ROOT,
+            env=_build_subprocess_env(),
+        )
         
         print("标准输出:")
         print(result.stdout)
@@ -46,15 +64,19 @@ def check_server_running():
     """检查服务器是否运行"""
     import requests
     try:
-        response = requests.get("http://localhost:8000/health", timeout=5)
+        base_url = get_local_server_base_url()
+        headers = build_headers()
+        response = requests.get(f"{base_url}/health", headers=headers, timeout=5)
         return response.status_code == 200
-    except:
+    except Exception:
         return False
 
 def main():
     """主函数"""
+    base_url = get_local_server_base_url()
     print("Agent API 测试套件")
     print("="*60)
+    print(f"目标服务器: {base_url}")
     
     # 检查服务器状态
     if check_server_running():

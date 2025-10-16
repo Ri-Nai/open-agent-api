@@ -4,24 +4,27 @@ Agent API 测试客户端
 演示如何使用 OpenAI 风格的 Agent API
 """
 
-import requests
 import json
 import sys
 import time
 
-# API 配置
-API_BASE_URL = "http://localhost:8000"
-API_KEY = ""  # 如果服务器启用了认证，请设置此值
+import requests
+
+from test_env import (
+    build_headers,
+    get_local_server_base_url,
+    load_settings,
+)
+
+
+API_BASE_URL = get_local_server_base_url()
 
 def test_models():
     """测试获取模型列表"""
     print("=== 测试获取模型列表 ===")
     
-    headers = {}
-    if API_KEY:
-        headers["Authorization"] = f"Bearer {API_KEY}"
-    
-    response = requests.get(f"{API_BASE_URL}/v1/models", headers=headers)
+    headers = build_headers()
+    response = requests.get(f"{API_BASE_URL}/v1/models", headers=headers, timeout=10)
     
     if response.status_code == 200:
         models = response.json()
@@ -35,9 +38,7 @@ def test_chat_blocking():
     """测试阻塞式聊天"""
     print("\n=== 测试阻塞式聊天 ===")
     
-    headers = {"Content-Type": "application/json"}
-    if API_KEY:
-        headers["Authorization"] = f"Bearer {API_KEY}"
+    headers = build_headers("application/json")
     
     payload = {
         "model": "agent-model",
@@ -49,9 +50,12 @@ def test_chat_blocking():
     
     print(f"发送请求: {payload['messages'][-1]['content']}")
     
-    response = requests.post(f"{API_BASE_URL}/v1/chat/completions", 
-                           headers=headers, 
-                           json=payload)
+    response = requests.post(
+        f"{API_BASE_URL}/v1/chat/completions",
+        headers=headers,
+        json=payload,
+        timeout=30,
+    )
     
     if response.status_code == 200:
         result = response.json()
@@ -66,9 +70,7 @@ def test_chat_streaming():
     """测试流式聊天"""
     print("\n=== 测试流式聊天 ===")
     
-    headers = {"Content-Type": "application/json"}
-    if API_KEY:
-        headers["Authorization"] = f"Bearer {API_KEY}"
+    headers = build_headers("application/json")
     
     payload = {
         "model": "agent-model",
@@ -83,10 +85,13 @@ def test_chat_streaming():
     print("助手回复: ", end="", flush=True)
     
     try:
-        response = requests.post(f"{API_BASE_URL}/v1/chat/completions", 
-                               headers=headers, 
-                               json=payload, 
-                               stream=True)
+        response = requests.post(
+            f"{API_BASE_URL}/v1/chat/completions",
+            headers=headers,
+            json=payload,
+            stream=True,
+            timeout=30,
+        )
         
         if response.status_code == 200:
             full_response = ""
@@ -122,9 +127,7 @@ def test_conversation_history():
     """测试对话历史"""
     print("\n=== 测试对话历史 ===")
     
-    headers = {"Content-Type": "application/json"}
-    if API_KEY:
-        headers["Authorization"] = f"Bearer {API_KEY}"
+    headers = build_headers("application/json")
     
     # 第一轮对话
     payload1 = {
@@ -138,9 +141,12 @@ def test_conversation_history():
     print("第一轮对话:")
     print(f"用户: {payload1['messages'][-1]['content']}")
     
-    response1 = requests.post(f"{API_BASE_URL}/v1/chat/completions", 
-                            headers=headers, 
-                            json=payload1)
+    response1 = requests.post(
+        f"{API_BASE_URL}/v1/chat/completions",
+        headers=headers,
+        json=payload1,
+        timeout=30,
+    )
     
     if response1.status_code != 200:
         print(f"第一轮对话失败: {response1.status_code} - {response1.text}")
@@ -164,9 +170,12 @@ def test_conversation_history():
     print("\n第二轮对话:")
     print(f"用户: {payload2['messages'][-1]['content']}")
     
-    response2 = requests.post(f"{API_BASE_URL}/v1/chat/completions", 
-                            headers=headers, 
-                            json=payload2)
+    response2 = requests.post(
+        f"{API_BASE_URL}/v1/chat/completions",
+        headers=headers,
+        json=payload2,
+        timeout=30,
+    )
     
     if response2.status_code == 200:
         result2 = response2.json()
@@ -181,11 +190,8 @@ def test_server_stats():
     """测试服务器统计信息"""
     print("\n=== 测试服务器统计信息 ===")
     
-    headers = {}
-    if API_KEY:
-        headers["Authorization"] = f"Bearer {API_KEY}"
-    
-    response = requests.get(f"{API_BASE_URL}/stats", headers=headers)
+    headers = build_headers()
+    response = requests.get(f"{API_BASE_URL}/stats", headers=headers, timeout=10)
     
     if response.status_code == 200:
         stats = response.json()
@@ -199,6 +205,8 @@ def main():
     """主测试函数"""
     print("Agent API 测试客户端")
     print("=" * 50)
+    settings = load_settings()
+    print(f"目标服务器: {API_BASE_URL} (监听 {settings.SERVER_HOST}:{settings.SERVER_PORT})")
     
     # 测试服务器连接
     try:

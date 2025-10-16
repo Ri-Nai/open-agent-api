@@ -5,27 +5,28 @@
 轻量级版本，专注于核心对话功能
 """
 
-import requests
 import json
 import sys
 
+import requests
+
+from test_env import build_headers, get_local_server_base_url, load_settings
+
 # 配置
-API_BASE_URL = "http://localhost:8000"
-API_KEY = ""  # 如果需要认证，请设置API密钥
+API_BASE_URL = get_local_server_base_url()
+SETTINGS = load_settings()
 
 def check_server():
     """检查服务器状态"""
     try:
         response = requests.get(f"{API_BASE_URL}/health", timeout=5)
         return response.status_code == 200
-    except:
+    except Exception:
         return False
 
 def send_message(messages, stream=True):
     """发送消息到API"""
-    headers = {"Content-Type": "application/json"}
-    if API_KEY:
-        headers["Authorization"] = f"Bearer {API_KEY}"
+    headers = build_headers("application/json")
     
     payload = {
         "model": "agent-model",
@@ -38,7 +39,8 @@ def send_message(messages, stream=True):
             f"{API_BASE_URL}/v1/chat/completions",
             headers=headers,
             json=payload,
-            stream=stream
+            stream=stream,
+            timeout=30,
         )
         
         if response.status_code == 200:
@@ -87,6 +89,7 @@ def main():
     """主程序"""
     print("🚀 Open Agent API 简单聊天程序")
     print("=" * 40)
+    print(f"目标服务器: {API_BASE_URL} (监听 {SETTINGS.SERVER_HOST}:{SETTINGS.SERVER_PORT})")
     
     # 检查服务器
     if not check_server():
